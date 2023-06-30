@@ -1,22 +1,22 @@
 
 from time import sleep
 
-from clickhouse_loader import create_clickhouse_db, bulk_save_to_clickhouse
+from clickhouse_loader import create_clickhouse_db, bulk_load_to_clickhouse
 from etl.etl_logger import etl_logger
 
-from kafka_extractor import fill_kafka, load_from_kafka
+from kafka_extractor import fill_random_kafka, extract_from_kafka
 
 
 def run_etl():
     """Запуск процесса проверки и переноса записей"""
-    fill_kafka()
+    fill_random_kafka()
 
     create_clickhouse_db()
 
     etl_logger.info('Loading from kafka')
-    events = load_from_kafka()
+    events = extract_from_kafka()
     etl_logger.info('Saving to clickhouse')
-    bulk_save_to_clickhouse(events)
+    bulk_load_to_clickhouse(events)
     etl_logger.info('Success, transferred %s events', str(len(events)))
 
 

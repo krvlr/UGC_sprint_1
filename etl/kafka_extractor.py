@@ -26,7 +26,7 @@ kafka_config = {
 consumer = Consumer(kafka_config)
 
 
-def load_from_kafka():
+def extract_from_kafka():
     events = []
     consumer.subscribe(['movies_views'])
     messages = consumer.consume(num_messages=50, timeout=1.0)
@@ -39,7 +39,7 @@ def load_from_kafka():
     return events
 
 
-def fill_kafka():
+def fill_random_kafka():
     for i in range(4):
         producer.produce(topic='movies_views',
                          value=str(datetime.datetime.utcnow()),

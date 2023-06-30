@@ -26,7 +26,7 @@ def create_clickhouse_db():
     )
 
 
-def bulk_save_to_clickhouse(events):
+def bulk_load_to_clickhouse(events):
     clickhouse_client.execute(
         """
         INSERT INTO movies_events.regular_table
@@ -48,7 +48,7 @@ def bulk_save_to_clickhouse(events):
     )
 
 
-def save_to_clickhouse(event):
+def load_to_clickhouse(event):
     clickhouse_client.execute(
         """
         INSERT INTO movies_events.regular_table
