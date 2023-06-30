@@ -10,6 +10,7 @@ clickhouse_client = Client(
 
 
 def create_clickhouse_db():
+    """Создать базу Clickhouse если не существует"""
     clickhouse_client.execute(
         "CREATE DATABASE IF NOT EXISTS movies_events ON CLUSTER company_cluster"
     )
@@ -29,6 +30,7 @@ def create_clickhouse_db():
 
 @backoff.on_exception(**backoff_settings)
 def bulk_load_to_clickhouse(events):
+    """Вставить много событий в Сlickhouse"""
     clickhouse_client.execute(
         """
         INSERT INTO movies_events.regular_table
@@ -51,6 +53,7 @@ def bulk_load_to_clickhouse(events):
 
 
 def load_to_clickhouse(event):
+    """Вставить одно событие в Сlickhouse"""
     clickhouse_client.execute(
         """
         INSERT INTO movies_events.regular_table

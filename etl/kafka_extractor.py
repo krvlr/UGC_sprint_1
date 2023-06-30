@@ -1,4 +1,5 @@
 import datetime
+import random
 import uuid
 from time import sleep
 
@@ -29,20 +30,22 @@ consumer = Consumer(kafka_config)
 
 @backoff.on_exception(**backoff_settings)
 def extract_from_kafka():
+    """Выгрузить события из Kafka"""
     events = []
     consumer.subscribe(['movies_views'])
     messages = consumer.consume(num_messages=50, timeout=1.0)
     for message in messages:
-        info_str = message.key() + message.value()
+        info_str = str(message.key(), 'utf-8') + ' ' + str(message.value(), 'utf-8')
         etl_logger.info(info_str)
-        person_uuid, film_uuid = str(message.key()).split('+')
-        events.append(Event(person_uuid, film_uuid, message.value()))
+        person_uuid, film_uuid = str(message.key(), 'utf-8').split('+')
+        events.append(Event(person_uuid, film_uuid, str(message.value(), 'utf-8')))
 
     return events
 
 
 def fill_random_kafka():
-    for i in range(4):
+    """Заполнить Kafka тестовыми событиями"""
+    for i in range(random.randint(0, 10)):
         producer.produce(topic='movies_views',
                          value=str(datetime.datetime.utcnow()),
                          key=str(uuid.uuid4()) + '+' + str(uuid.uuid4()))

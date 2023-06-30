@@ -12,4 +12,4 @@ COPY . .
 
 RUN chmod +x wait-for-it.sh
 
-ENTRYPOINT ["python", "etl_process.py"]
+ENTRYPOINT ["./wait-for-it.sh", "clickhouse-node1:9000", "--", "python", "etl_process.py"]
