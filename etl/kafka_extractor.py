@@ -1,11 +1,11 @@
 import datetime
-import logging
 import uuid
 from time import sleep
 
 from confluent_kafka.cimpl import Producer, Consumer
 
 from config import config
+from etl.etl_logger import etl_logger
 
 producer = Producer({"bootstrap.servers": config.kafka_host})
 
@@ -25,10 +25,6 @@ kafka_config = {
 
 consumer = Consumer(kafka_config)
 
-logging.basicConfig()
-logger = logging.getLogger("ETL")
-logger.setLevel(level=logging.INFO)
-
 
 def load_from_kafka():
     events = []
@@ -36,7 +32,7 @@ def load_from_kafka():
     messages = consumer.consume(num_messages=50, timeout=1.0)
     for message in messages:
         info_str = message.key() + message.value()
-        logger.info(info_str)
+        etl_logger.info(info_str)
         person_uuid, film_uuid = str(message.key()).split('+')
         events.append(Event(person_uuid, film_uuid, message.value()))
 

@@ -1,13 +1,10 @@
-import logging
+
 from time import sleep
 
 from clickhouse_loader import create_clickhouse_db, bulk_save_to_clickhouse
+from etl.etl_logger import etl_logger
 
 from kafka_extractor import fill_kafka, load_from_kafka
-
-logging.basicConfig()
-logger = logging.getLogger("etl")
-logger.setLevel(level=logging.INFO)
 
 
 def run_etl():
@@ -16,11 +13,11 @@ def run_etl():
 
     create_clickhouse_db()
 
-    logger.info('Loading from kafka')
+    etl_logger.info('Loading from kafka')
     events = load_from_kafka()
-    logger.info('Saving to clickhouse')
+    etl_logger.info('Saving to clickhouse')
     bulk_save_to_clickhouse(events)
-    logger.info('Success, transferred %s events', str(len(events)))
+    etl_logger.info('Success, transferred %s events', str(len(events)))
 
 
 def run_etl_process():
@@ -29,10 +26,10 @@ def run_etl_process():
         try:
             run_etl()
         except Exception as ex:
-            logging.error('Exception what' + str(ex))
+            etl_logger.error('Exception what' + str(ex))
         sleep(5)
 
 
 if __name__ == '__main__':
     run_etl_process()
-    logger.info('ETL kafka to clickhouse success')
+    etl_logger.info('ETL kafka to clickhouse success')
