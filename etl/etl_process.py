@@ -1,12 +1,15 @@
-
 from time import sleep
 
+import backoff
+
 from clickhouse_loader import create_clickhouse_db, bulk_load_to_clickhouse
-from etl.etl_logger import etl_logger
+from config import backoff_settings
+from etl_logger import etl_logger
 
 from kafka_extractor import fill_random_kafka, extract_from_kafka
 
 
+@backoff.on_exception(**backoff_settings)
 def run_etl():
     """Запуск процесса проверки и переноса записей"""
     fill_random_kafka()
@@ -27,7 +30,7 @@ def run_etl_process():
             run_etl()
         except Exception as ex:
             etl_logger.error('Exception what' + str(ex))
-        sleep(5)
+        sleep(10)
 
 
 if __name__ == '__main__':

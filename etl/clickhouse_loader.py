@@ -1,6 +1,7 @@
+import backoff
 from clickhouse_driver import Client
 
-from config import config
+from config import config, backoff_settings
 
 clickhouse_client = Client(
     host=config.clickhouse_host,
@@ -26,6 +27,7 @@ def create_clickhouse_db():
     )
 
 
+@backoff.on_exception(**backoff_settings)
 def bulk_load_to_clickhouse(events):
     clickhouse_client.execute(
         """

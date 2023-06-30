@@ -2,10 +2,11 @@ import datetime
 import uuid
 from time import sleep
 
+import backoff
 from confluent_kafka.cimpl import Producer, Consumer
 
-from config import config
-from etl.etl_logger import etl_logger
+from config import config, backoff_settings
+from etl_logger import etl_logger
 
 producer = Producer({"bootstrap.servers": config.kafka_host})
 
@@ -26,6 +27,7 @@ kafka_config = {
 consumer = Consumer(kafka_config)
 
 
+@backoff.on_exception(**backoff_settings)
 def extract_from_kafka():
     events = []
     consumer.subscribe(['movies_views'])
