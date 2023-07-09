@@ -9,7 +9,7 @@ from service.select_queries import QUERIES
 def select_query_avr_time(query):
     return (
         sum(time_execute(QUERIES[query]["Clickhouse"], values) for _ in range(REPEAT_TEST_COUNT))
-        / REPEAT_TEST_COUNT
+        # / REPEAT_TEST_COUNT
     )
 
 

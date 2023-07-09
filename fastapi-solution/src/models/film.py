@@ -39,3 +39,9 @@ class FilmDetail(FilmBrief):
     writers: list[FilmPerson]
     directors: list[FilmPerson]
     genres: list[FilmGenre]
+
+
+class FilmProgress(BaseModel):
+    user_id: str
+    movie_id: str
+    timestamp_of_film: str

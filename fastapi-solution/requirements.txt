@@ -12,3 +12,5 @@ uvloop==0.17.0 ; sys_platform != "win32" and implementation_name == "cpython"
 redis==4.5.1
 elasticsearch[async]==7.9.1
 gunicorn==20.1.0
+kafka-python==2.0.2
+# aiokafka==0.8.1

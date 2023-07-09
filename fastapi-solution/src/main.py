@@ -1,15 +1,19 @@
 import uvicorn
 from api.v1 import films, genres, persons
 from core import config
-from core.config import jaeger_settings, settings
+from core.config import jaeger_settings, settings, kafka_settings
 from core.logger import get_logging_config_dict
 from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from redis.asyncio import Redis
+
+# from aiokafka import AIOKafkaProducer
+from kafka import KafkaProducer
+
 from utils.jaeger_config import configure_jaeger_tracer
 
-from db import elastic, redis
+from db import elastic, redis, kafka_provider
 
 app = FastAPI(
     title=settings.project_name,
@@ -18,19 +22,26 @@ app = FastAPI(
     default_response_class=ORJSONResponse,
 )
 
-configure_jaeger_tracer(app, jaeger_settings.host, jaeger_settings.port)
+# configure_jaeger_tracer(app, jaeger_settings.host, jaeger_settings.port)
 
 
 @app.on_event("startup")
 async def startup():
     redis.redis = Redis(host=settings.redis_host, port=settings.redis_port)
     elastic.es = AsyncElasticsearch(hosts=[f"{settings.elastic_host}:{settings.elastic_port}"])
+    # kafka_producer.kafka_producer = AIOKafkaProducer(
+    #     bootstrap_servers=[f"{kafka_settings.host}:{kafka_settings.port}"])
+    kafka_provider.kafka_producer = KafkaProducer(
+        bootstrap_servers=[f"{kafka_settings.host}:{kafka_settings.port}"]
+    )
 
 
 @app.on_event("shutdown")
 async def shutdown():
     await redis.redis.close()
     await elastic.es.close()
+    # await kafka_provider.kafka_producer.stop()
+    kafka_provider.kafka_producer.close()
 
 
 app.include_router(films.router, prefix="/api/v1/films", tags=["films"])
@@ -45,4 +56,5 @@ if __name__ == "__main__":
         port=8000,
         log_config=get_logging_config_dict(config.log_level),
         log_level=config.log_level,
+        debug=True,
     )

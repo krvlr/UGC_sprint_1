@@ -3,9 +3,9 @@ from typing import Iterator
 
 import psycopg2
 from decorators import backoff
-from loguru import logger
 from psycopg2.extras import RealDictCursor
 from settings import ETL_BATCH_SIZE, POSTGRES_CONNECTION_SETTINGS
+
 
 FILMWORKS_QUERY = """
         SELECT
@@ -49,7 +49,7 @@ FILMWORKS_QUERY = """
                    )
                ),
                '[]'
-           ) as genres, 
+           ) as genres,
             COALESCE (array_agg(DISTINCT p.full_name) FILTER ( WHERE  pfw.role = 'actor'), '{}') as actors_names,
             COALESCE (array_agg(DISTINCT p.full_name) FILTER ( WHERE  pfw.role = 'writer'), '{}') as writers_names,
             COALESCE (array_agg(DISTINCT p.full_name) FILTER ( WHERE  pfw.role = 'director'), '{}') as directors_names
@@ -94,7 +94,7 @@ GENRES_QUERY = """
             g.id,
             g.name,
             g.description
-        FROM content.genre g 
+        FROM content.genre g
         WHERE g.modified > %s
 """
 

@@ -33,6 +33,12 @@ class DataProvider(metaclass=ABCMeta):
         pass
 
 
+class QueueProvider(metaclass=ABCMeta):
+    @abc.abstractmethod
+    def send(self, topic, event, key):
+        pass
+
+
 class DbAdapter(metaclass=ABCMeta):
     @abc.abstractmethod
     def __init__(self, data_provider: DataProvider):

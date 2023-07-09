@@ -32,7 +32,16 @@ class JaegerSettings(BaseSettings):
         env_file = ".env"
 
 
+class KafkaSettings(BaseSettings):
+    host: str = Field(default="127.0.0.1", env="KAFKA_HOST")
+    port: str = Field(default=9092, env="KAFKA_PORT")
+
+    class Config:
+        env_file = ".env"
+
+
 settings = Settings()
 jaeger_settings = JaegerSettings()
+kafka_settings = KafkaSettings()
 
 log_level = logging.DEBUG if settings.debug_log_level else logging.INFO

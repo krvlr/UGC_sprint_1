@@ -109,7 +109,7 @@ def create_partitions(target, connection, **kwargs):
 class UserActionsHistory(alchemy.Model):
     __tablename__ = "user_actions_history"
     __table_args__ = (
-        UniqueConstraint('id', 'created'),
+        UniqueConstraint("id", "created"),
         {
             "postgresql_partition_by": "RANGE (created)",
             "listeners": [("after_create", create_partitions)],

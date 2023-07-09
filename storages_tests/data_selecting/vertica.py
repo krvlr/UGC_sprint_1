@@ -18,7 +18,7 @@ def select_query_avr_time(query):
             )
             for _ in range(REPEAT_TEST_COUNT)
         )
-        / REPEAT_TEST_COUNT
+        # / REPEAT_TEST_COUNT
     )
 
 

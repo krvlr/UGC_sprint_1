@@ -27,7 +27,7 @@ def insert_query_avr_time(chunk):
             )
             for _ in range(REPEAT_TEST_COUNT)
         )
-        / REPEAT_TEST_COUNT
+        # / REPEAT_TEST_COUNT
     )
 
 
