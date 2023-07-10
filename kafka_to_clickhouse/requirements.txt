@@ -1,0 +1,4 @@
+pydantic==1.10.7
+kafka-python==2.0.2
+clickhouse-driver
+confluent_kafka

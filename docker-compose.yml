@@ -1,14 +1,216 @@
-version: '3.5'
+version: '3'
+
+volumes:
+  auth_postgres_data:
+  auth_redis_data:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  jaeger_volume:
+
+networks:
+  movies_network:
+  auth_network:
+  data_network:
 
 services:
-  etl_kafka_to_clickhouse:
-    build: ./etl
+  db:
+    image: postgres:13-alpine
+    container_name: db-movies
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./db/movies_database.sql:/docker-entrypoint-initdb.d/movies_database.sql
+    networks:
+      - movies_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "5432"
+
+  redis:
+    image: redis:7.0.8-alpine
+    container_name: redis-movies
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - movies_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+    expose:
+      - "6379"
+
+  elasticsearch:
+    image: elasticsearch:7.17.9
+    container_name: elasticsearch-movies
+    restart: always
+    environment:
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "ES_JAVA_OPTS=-Xms200m -Xmx200m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - movies_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "9200"
+
+  postgres_to_es:
+    build:
+      context: .
+      dockerfile: postgres_to_es/Dockerfile
+    container_name: postgres_to_es
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - movies_network
+
+  api:
+    build:
+      context: ./fastapi-solution
+      dockerfile: Dockerfile
+    container_name: api-movies
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - movies_network
+    expose:
+      - "8000"
+
+  db-auth:
+    image: postgres:13-alpine
+    container_name: db-auth
+    restart: always
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data/
+    networks:
+      - auth_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $$AUTH_POSTGRES_DB -U $$AUTH_POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "5432"
+
+  redis-auth:
+    image: redis:7.0.8-alpine
+    container_name: redis-auth
+    restart: always
+    volumes:
+      - auth_redis_data:/data
+    networks:
+      - auth_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+    expose:
+      - "6379"
+
+  api-auth:
+    build:
+      context: ./flask-auth
+      dockerfile: Dockerfile
+    container_name: api-auth
+    restart: always
+    depends_on:
+      db-auth:
+        condition: service_healthy
+      redis-auth:
+        condition: service_healthy
+    env_file:
+      - .env
+    healthcheck:
+      test: "curl -H 'X-Request-Id: ${AUTH_HEALTHCHECK_REQUEST_ID}' --fail http://127.0.0.1:8000/api/v1/health || exit 1"
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    networks:
+      - auth_network
+    expose:
+      - "8000"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.20.0
+    container_name: jaeger
+    restart: always
+    volumes:
+      - jaeger_volume:/badger
+    environment:
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+    depends_on:
+      api-auth:
+        condition: service_healthy
+    networks:
+      - movies_network
+      - auth_network
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+
+  nginx:
+    image: nginx:1.23.1-alpine
+    container_name: nginx-movies
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      api-auth:
+        condition: service_healthy
+    networks:
+      - movies_network
+      - auth_network
+    ports:
+      - "80:80"
+
+  kafka_to_clickhouse:
+    build: ./kafka_to_clickhouse
+    container_name: kafka_to_clickhouse
     depends_on:
       - zookeeper
       - zookeeper_kafka
     env_file:
       - .env
-      
+    networks:
+      - data_network
+      - movies_network
+
   zookeeper_kafka:
     image: confluentinc/cp-zookeeper:7.4.0
     hostname: zookeeper_kafka
@@ -18,6 +220,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - movies_network
 
   broker:
     image: confluentinc/cp-server:7.4.0
@@ -47,6 +251,8 @@ services:
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
       CONFLUENT_METRICS_ENABLE: 'true'
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    networks:
+      - movies_network
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.4.0
@@ -60,6 +266,8 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - movies_network
 
   connect:
     image: cnfldemos/cp-server-connect-datagen:0.5.3-7.1.0
@@ -90,6 +298,8 @@ services:
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+    networks:
+      - movies_network
 
   control-center:
     image: confluentinc/cp-enterprise-control-center:7.4.0
@@ -113,6 +323,8 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
+    networks:
+      - movies_network
 
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:7.4.0
@@ -136,6 +348,8 @@ services:
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
       KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
+    networks:
+      - movies_network
 
   ksqldb-cli:
     image: confluentinc/cp-ksqldb-cli:7.4.0
@@ -146,6 +360,8 @@ services:
       - ksqldb-server
     entrypoint: /bin/sh
     tty: true
+    networks:
+      - movies_network
 
   ksql-datagen:
     image: confluentinc/ksqldb-examples:7.4.0
@@ -168,6 +384,8 @@ services:
       STREAMS_BOOTSTRAP_SERVERS: broker:29092
       STREAMS_SCHEMA_REGISTRY_HOST: schema-registry
       STREAMS_SCHEMA_REGISTRY_PORT: 8081
+    networks:
+      - movies_network
 
   rest-proxy:
     image: confluentinc/cp-kafka-rest:7.4.0
@@ -183,15 +401,15 @@ services:
       KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
       KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
-
-
-
-
+    networks:
+      - movies_network
 
   zookeeper:
     image: zookeeper:3.5
     container_name: zookeeper
     hostname: zookeeper
+    networks:
+      - data_network
 
   clickhouse-node1:
     image: yandex/clickhouse-server:20.4
@@ -204,6 +422,8 @@ services:
       - ./data/node1:/etc/clickhouse-server
     depends_on:
       - zookeeper
+    networks:
+      - data_network
 
   clickhouse-node2:
     image: yandex/clickhouse-server:20.4
@@ -213,6 +433,8 @@ services:
       - ./data/node2:/etc/clickhouse-server
     depends_on:
       - zookeeper
+    networks:
+      - data_network
 
   clickhouse-node3:
     image: yandex/clickhouse-server:20.4
@@ -222,6 +444,8 @@ services:
       - ./data/node3:/etc/clickhouse-server
     depends_on:
       - zookeeper
+    networks:
+      - data_network
 
   clickhouse-node4:
     image: yandex/clickhouse-server:20.4
@@ -231,3 +455,5 @@ services:
       - ./data/node4:/etc/clickhouse-server
     depends_on:
       - zookeeper
+    networks:
+      - data_network
