@@ -35,7 +35,9 @@ def main():
     data_transformer = DataTransformer()
     click_house_loader = ClickHouseLoader(
         client=Client(
-            host=base_settings.clickhouse_host, alt_hosts=base_settings.clickhouse_alt_hosts
+            host=base_settings.clickhouse_host,
+            alt_hosts=base_settings.clickhouse_alt_hosts,
+            password=base_settings.clickhouse_password,
         )
     )
 
