@@ -90,7 +90,7 @@ def test_kafka_to_clickhouse_count():
     assert (count_of_attempts < 5)
 
 
-def test_kafka_to_clickhouse():
+def test_compare_events():
     clear_clickhouse()
     events_kafka = fill_random_kafka_events()
     events_size = 0
