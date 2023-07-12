@@ -11,7 +11,7 @@
 
     <users>
         <default>
-            <password></password>
+            <password_sha256_hex>a7c3fce0af38fcb83c2f6adfa53ab220e9b1d739e2208a665ffa54267bbc8781</password_sha256_hex>
             <profile>default</profile>
             <networks>
                 <ip>::/0</ip>
@@ -19,7 +19,7 @@
             <quota>default</quota>
         </default>
         <admin>
-            <password>123</password>
+            <password_sha256_hex>5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8</password_sha256_hex>
             <profile>default</profile>
             <networks>
                 <ip>::/0</ip>
