@@ -1,8 +1,10 @@
 import datetime
 import json
+import logging
+import random
 import uuid
 from time import sleep
-import logging
+
 from clickhouse_driver import Client
 from confluent_kafka.cimpl import Producer
 from pydantic import BaseModel
@@ -25,7 +27,8 @@ class FilmProgress(BaseModel):
 
 def fill_random_kafka():
     """Заполнить Kafka тестовыми событиями"""
-    for i in range(100):
+    count_of_events = random.randint(1, 100)
+    for i in range(count_of_events):
         f = FilmProgress(user_id=str(uuid.uuid4()),
                          movie_id=str(uuid.uuid4()),
                          timestamp_of_film=str(datetime.datetime.utcnow()))
@@ -36,6 +39,26 @@ def fill_random_kafka():
                          key=key)
     producer.flush()
     sleep(1)
+    return count_of_events
+
+
+def fill_random_kafka_events():
+    """Заполнить Kafka тестовыми событиями и вернуть список событий"""
+    count_of_events = random.randint(1, 100)
+    events = []
+    for i in range(count_of_events):
+        f = FilmProgress(user_id=str(uuid.uuid4()),
+                         movie_id=str(uuid.uuid4()),
+                         timestamp_of_film=str(datetime.datetime.utcnow()))
+        event = f.dict()
+        events.append(list(event.values()))
+        key = event["user_id"] + event["movie_id"]
+        producer.produce(topic='movies_views',
+                         value=json.dumps(event).encode("utf-8"),
+                         key=key)
+    producer.flush()
+    sleep(1)
+    return events
 
 
 def get_events_from_clickhouse():
@@ -53,15 +76,36 @@ def clear_clickhouse():
         """)
 
 
-def test_kafka_to_clickhouse():
+def test_kafka_to_clickhouse_count():
     clear_clickhouse()
-    fill_random_kafka()
+    count_of_events = fill_random_kafka()
     events_size = 0
     count_of_attempts = 0
-    while events_size != 100 and count_of_attempts < 5:
+    while events_size != count_of_events and count_of_attempts < 5:
         events = get_events_from_clickhouse()
         events_size = len(events)
         count_of_attempts += 1
         sleep(3)
-    assert (events_size == 100)
+    assert (events_size == count_of_events)
+    assert (count_of_attempts < 5)
+
+
+def test_kafka_to_clickhouse():
+    clear_clickhouse()
+    events_kafka = fill_random_kafka_events()
+    events_size = 0
+    count_of_attempts = 0
+    while events_size != len(events_kafka) and count_of_attempts < 5:
+        events = get_events_from_clickhouse()
+        events_size = len(events)
+        count_of_attempts += 1
+        sleep(3)
+    events_kafka.sort()
+    if events_size == len(events_kafka):
+        for i in range(len(events)):
+            assert (events[i][0] == events_kafka[i][0])
+            assert (events[i][1] == events_kafka[i][1])
+            assert (events[i][2] == events_kafka[i][2])
+
+    assert (events_size == len(events_kafka))
     assert (count_of_attempts < 5)
