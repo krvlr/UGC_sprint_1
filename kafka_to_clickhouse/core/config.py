@@ -13,6 +13,7 @@ class BaseSettings(BaseConfig):
     clickhouse_alt_hosts: str = Field(
         default="clickhouse-node2, clickhouse-node3, clickhouse-node4", env="CLICKHOUSE_ALT_HOSTS"
     )
+    clickhouse_password: str = Field(default="", env="CLICKHOUSE_PASSWORD")
     topics: str = Field(default="movies_views", env="KAFKA_TOPICS")
     num_messages: str = Field(default="200", env="KAFKA_EXTRACT_NUM_MESSAGES")
     timeout: str = Field(default="10", env="KAFKA_EXTRACT_TIMEOUT")
