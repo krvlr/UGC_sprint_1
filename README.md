@@ -100,6 +100,15 @@ Cервис авторизации предоставляет возможнос
     YANDEX_ACCESS_TOKEN_URL
     YANDEX_AUTHORIZE_URL
     YANDEX_USER_INFO_URL
+    KAFKA_HOST=broker
+    KAFKA_PORT
+    CLICKHOUSE_HOST
+    CLICKHOUSE_ALT_HOSTS
+    KAFKA_TOPICS
+    KAFKA_EXTRACT_NUM_MESSAGES
+    KAFKA_EXTRACT_TIMEOUT
+    KAFKA_GROUP_ID
+    KAFKA_AUTO_OFFSET_RESET
 
 Теперь можно запустить сборку образа и запуск контейнеров:
 

@@ -1,5 +1,6 @@
 from core.config import logger_settings
 
+
 LOGGER_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,

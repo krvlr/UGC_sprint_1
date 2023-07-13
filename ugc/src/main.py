@@ -1,22 +1,16 @@
 import uvicorn
-from api.v1 import films, genres, persons, core
+from api.v1 import ugc, core
 from core import config
-from core.config import (
-    jaeger_settings,
-    base_settings,
-    logger_settings,
-    redis_settings,
-    elastic_settings,
-)
+from core.config import jaeger_settings, base_settings, logger_settings, kafka_settings
 from core.logger import LOGGER_CONFIG
-from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
-from redis.asyncio import Redis
+
+from aiokafka import AIOKafkaProducer
 
 from utils.jaeger_config import configure_jaeger_tracer
 
-from db import elastic, redis
+from db import kafka_provider
 
 app = FastAPI(
     title=base_settings.project_name,
@@ -30,19 +24,18 @@ configure_jaeger_tracer(app, jaeger_settings.host, jaeger_settings.port)
 
 @app.on_event("startup")
 async def startup():
-    redis.redis = Redis(host=redis_settings.host, port=redis_settings.port)
-    elastic.es = AsyncElasticsearch(hosts=[f"{elastic_settings.host}:{elastic_settings.port}"])
+    kafka_provider.kafka_producer = AIOKafkaProducer(
+        bootstrap_servers=[f"{kafka_settings.host}:{kafka_settings.port}"]
+    )
+    await kafka_provider.kafka_producer.start()
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    await redis.redis.close()
-    await elastic.es.close()
+    await kafka_provider.kafka_producer.stop()
 
 
-app.include_router(films.router, prefix="/api/v1/films", tags=["films"])
-app.include_router(genres.router, prefix="/api/v1/genres", tags=["genres"])
-app.include_router(persons.router, prefix="/api/v1/persons", tags=["persons"])
+app.include_router(ugc.router, prefix="/api/v1/ugc", tags=["ugc"])
 app.include_router(core.router, prefix="/api/v1", tags=["core"])
 
 

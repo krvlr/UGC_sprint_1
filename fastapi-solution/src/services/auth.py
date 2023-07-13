@@ -2,7 +2,7 @@ import logging
 from http import HTTPStatus
 
 import jwt
-from core.config import settings
+from core.config import base_settings
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import ExpiredSignatureError
@@ -32,7 +32,7 @@ class JWTBearerPremium(HTTPBearer):
         try:
             decoded_token = jwt.decode(
                 credentials.credentials,
-                settings.secret_key,
+                base_settings.secret_key,
                 algorithms=["HS256"],
             )
         except ExpiredSignatureError:

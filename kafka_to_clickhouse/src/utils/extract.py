@@ -14,10 +14,6 @@ class Extractor(metaclass=ABCMeta):
     def get_batch_extractor(self, batch_size: int, timeout: int):
         pass
 
-    @abc.abstractmethod
-    def commit(self):
-        pass
-
 
 class KafkaExtractor(Extractor):
     """Класс для выгрузки данных из топиков Kafka."""
@@ -30,10 +26,7 @@ class KafkaExtractor(Extractor):
     def get_batch_extractor(self, batch_size: int = 100, timeout: int = 5):
         """Метод для вычитывания событий из Kafka."""
         events = self.consumer.consume(num_messages=batch_size, timeout=timeout)
-        logger.info(f"Extract {len(events)} events")
+        logger.info(f"Extract {len(events)} evens")
 
         for event in events:
             yield json.loads(event.value().decode("utf-8"))
-
-    def commit(self):
-        self.consumer.commit()

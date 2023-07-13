@@ -1,5 +1,4 @@
 import abc
-import logging
 from abc import ABCMeta
 from enum import Enum
 from typing import Type
@@ -8,8 +7,6 @@ from models.film import FilmBrief, FilmDetail
 from models.genre import GenreBrief, GenreDetail
 from models.person import PersonBrief, PersonDetail
 from pydantic import BaseModel
-
-logger = logging.getLogger(__name__)
 
 
 class SortingOrder(Enum):
@@ -30,12 +27,6 @@ class DataProvider(metaclass=ABCMeta):
 
     @abc.abstractmethod
     async def search(self, obj_name, body, from_, size, sort):
-        pass
-
-
-class QueueProvider(metaclass=ABCMeta):
-    @abc.abstractmethod
-    def send(self, topic, event, key):
         pass
 
 
