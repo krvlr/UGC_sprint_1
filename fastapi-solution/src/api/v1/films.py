@@ -1,7 +1,6 @@
 import logging
 from dataclasses import asdict
 from http import HTTPStatus
-from db.kafka_provider import KafkaQueueProvider, get_kafka_queue_provider
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from models.film import FilmBrief, FilmDetail, FilmFilters, FilmProgress
@@ -26,18 +25,6 @@ async def film_search(
     return await film_service.get_by_query(
         query, sort, paginator.page_number, paginator.page_size, asdict(filters)
     )
-
-
-@router.put("/register_progress")
-async def register_film_timestamp(
-    film_progress: FilmProgress,
-    queue_provider: KafkaQueueProvider = Depends(get_kafka_queue_provider),
-):
-    event = film_progress.dict()
-    key = event["user_id"] + event["movie_id"]
-    queue_provider.send(topic="movies_views", event=event, key=key)
-    # await queue_provider.send(topic="movies_views", event=event, key=key)
-    return {}
 
 
 @router.get("/", response_model=list[FilmBrief])

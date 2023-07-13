@@ -4,7 +4,7 @@ from functools import lru_cache
 from inspect import signature
 from typing import Any, Callable
 
-from core.config import settings
+from core.config import redis_settings
 from db.base_cache import CacheAdapter, CacheProvider
 from db.redis import RedisProvider
 from redis.asyncio import Redis
@@ -51,7 +51,7 @@ class RedisAdapter(CacheAdapter):
 
 @lru_cache()
 def get_redis_adapter() -> CacheAdapter:
-    redis = Redis(host=settings.redis_host, port=settings.redis_port)
+    redis = Redis(host=redis_settings.host, port=redis_settings.port)
     cache_provider = RedisProvider(redis=redis)
     cache_adapter = RedisAdapter(cache_provider=cache_provider)
     return cache_adapter

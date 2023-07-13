@@ -13,10 +13,11 @@ class BaseSettings(BaseConfig):
     clickhouse_alt_hosts: str = Field(
         default="clickhouse-node2, clickhouse-node3, clickhouse-node4", env="CLICKHOUSE_ALT_HOSTS"
     )
+    clickhouse_password = Field(default="default_password", env="CLICKHOUSE_PASSWORD")
     topics: str = Field(default="movies_views", env="KAFKA_TOPICS")
     num_messages: str = Field(default="200", env="KAFKA_EXTRACT_NUM_MESSAGES")
     timeout: str = Field(default="10", env="KAFKA_EXTRACT_TIMEOUT")
-    group_id: str = Field(default="timestamp-of-film", env="KAFKA_GROUP_ID")
+    group_id: str = Field(default="app", env="KAFKA_GROUP_ID")
     auto_offset_reset: str = Field(default="smallest", env="KAFKA_AUTO_OFFSET_RESET")
 
     def get_kafka_topics(self):
@@ -26,7 +27,6 @@ class BaseSettings(BaseConfig):
         return {
             "bootstrap.servers": f"{self.kafka_host}:{self.kafka_port}",
             "group.id": self.group_id,
-            "enable.auto.commit": False,
             "auto.offset.reset": self.auto_offset_reset,
         }
 
