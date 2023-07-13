@@ -77,6 +77,7 @@ def clear_clickhouse():
 
 
 def test_kafka_to_clickhouse_count():
+    """Тест на проверку количества событий в кафке и после etl в clickhouse"""
     clear_clickhouse()
     count_of_events = fill_random_kafka()
     events_size = 0
@@ -91,6 +92,7 @@ def test_kafka_to_clickhouse_count():
 
 
 def test_compare_events():
+    """Тест на проверку, что все данные в событиях kafka и clickhouse совпадают"""
     clear_clickhouse()
     events_kafka = fill_random_kafka_events()
     events_size = 0
@@ -103,9 +105,8 @@ def test_compare_events():
     events_kafka.sort()
     if events_size == len(events_kafka):
         for i in range(len(events)):
-            assert (events[i][0] == events_kafka[i][0])
-            assert (events[i][1] == events_kafka[i][1])
-            assert (events[i][2] == events_kafka[i][2])
+            for field in range(3):
+                assert (events[i][field] == events_kafka[i][field])
 
     assert (events_size == len(events_kafka))
     assert (count_of_attempts < 5)
