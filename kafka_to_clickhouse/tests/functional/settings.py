@@ -26,18 +26,8 @@ class BaseSettings(BaseConfig):
         return {
             "bootstrap.servers": f"{self.kafka_host}:{self.kafka_port}",
             "group.id": self.group_id,
-            "enable.auto.commit": False,
             "auto.offset.reset": self.auto_offset_reset,
         }
 
 
-class LoggerSettings(BaseConfig):
-    level: str = Field(default="INFO", env="LOGGING_LEVEL")
-    format: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s", env="LOG_FORMAT"
-    )
-    default_handlers: list = ["console"]
-
-
-base_settings = BaseSettings()
-logger_settings = LoggerSettings()
+test_base_settings = BaseSettings()

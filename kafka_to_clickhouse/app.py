@@ -15,14 +15,15 @@ logging.config.dictConfig(LOGGER_CONFIG)
 logger = logging.getLogger(__name__)
 
 
-def etl(extrator: Extractor, transformer: Transformer, loader: Loader):
+def etl(extractor: Extractor, transformer: Transformer, loader: Loader):
     """Основной метод перекачки данных из Kafka в ClickHouse."""
     logger.info("Start etl from Kafka to ClickHouse")
-    events = extrator.get_batch_extractor(
+    events = extractor.get_batch_extractor(
         batch_size=int(base_settings.num_messages), timeout=int(base_settings.timeout)
     )
     transform_events = transformer.get_batch_transformer(events)
     loader.save_data(transform_events)
+    extractor.commit()
 
 
 def main():
@@ -35,15 +36,13 @@ def main():
     data_transformer = DataTransformer()
     click_house_loader = ClickHouseLoader(
         client=Client(
-            host=base_settings.clickhouse_host,
-            alt_hosts=base_settings.clickhouse_alt_hosts,
-            password=base_settings.clickhouse_password,
+            host=base_settings.clickhouse_host, alt_hosts=base_settings.clickhouse_alt_hosts
         )
     )
 
     while True:
         try:
-            etl(extrator=kafka_extractor, transformer=data_transformer, loader=click_house_loader)
+            etl(extractor=kafka_extractor, transformer=data_transformer, loader=click_house_loader)
         except Exception as ex:
             logger.error(f"Error etl data from Kafka to ClickHouse: {ex}")
 
