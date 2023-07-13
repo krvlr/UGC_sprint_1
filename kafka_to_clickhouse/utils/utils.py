@@ -23,8 +23,8 @@ def backoff(start_sleep_time=0.1, factor=2, border_sleep_time=10):
                     res = func(*args, **kwargs)
                     return res
                 except Exception as error:
-                    logger.info("Exception: \n%s", error)
-                    logger.info("Start sleeping for %s seconds (%s iter)", sleep_time, sleep_iter)
+                    logger.info(f"Exception in {func.__qualname__}: \n{error}")
+                    logger.info(f"Start sleeping for {sleep_time} seconds ({sleep_iter} iter)")
                     sleep(sleep_time)
 
                     sleep_iter += 1

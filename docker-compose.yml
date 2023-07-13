@@ -11,7 +11,7 @@ volumes:
 networks:
   movies_network:
   auth_network:
-  data_network:
+  ugc_network:
 
 services:
   db:
@@ -99,6 +99,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: "curl -H 'X-Request-Id: ${AUTH_HEALTHCHECK_REQUEST_ID}' --fail http://127.0.0.1:8000/api/v1/health || exit 1"
+      interval: 10s
+      timeout: 10s
+      retries: 3
     env_file:
       - .env
     networks:
@@ -173,12 +178,10 @@ services:
       - BADGER_EPHEMERAL=false
       - BADGER_DIRECTORY_VALUE=/badger/data
       - BADGER_DIRECTORY_KEY=/badger/key
-    depends_on:
-      api-auth:
-        condition: service_healthy
     networks:
       - movies_network
       - auth_network
+      - ugc_network
     ports:
       - "6831:6831/udp"
       - "16686:16686"
@@ -191,25 +194,48 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
+      api:
+        condition: service_healthy
       api-auth:
+        condition: service_healthy
+      api-ugc:
         condition: service_healthy
     networks:
       - movies_network
       - auth_network
+      - ugc_network
     ports:
       - "80:80"
+
+  api-ugc:
+    build:
+      context: ./ugc
+      dockerfile: Dockerfile
+    container_name: api-ugc
+    restart: always
+    healthcheck:
+      test: "curl -H 'X-Request-Id: ${AUTH_HEALTHCHECK_REQUEST_ID}' --fail http://127.0.0.1:8000/api/v1/health || exit 1"
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    env_file:
+      - .env
+    networks:
+      - ugc_network
+    expose:
+      - "8000"
 
   kafka_to_clickhouse:
     build: ./kafka_to_clickhouse
     container_name: kafka_to_clickhouse
+    restart: always
     depends_on:
       - zookeeper
       - zookeeper_kafka
     env_file:
       - .env
     networks:
-      - data_network
-      - movies_network
+      - ugc_network
 
   zookeeper_kafka:
     image: confluentinc/cp-zookeeper:7.4.0
@@ -221,7 +247,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - movies_network
+      - ugc_network
 
   broker:
     image: confluentinc/cp-server:7.4.0
@@ -252,7 +278,7 @@ services:
       CONFLUENT_METRICS_ENABLE: 'true'
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
     networks:
-      - movies_network
+      - ugc_network
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.4.0
@@ -267,7 +293,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
     networks:
-      - movies_network
+      - ugc_network
 
   connect:
     image: cnfldemos/cp-server-connect-datagen:0.5.3-7.1.0
@@ -299,7 +325,7 @@ services:
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
     networks:
-      - movies_network
+      - ugc_network
 
   control-center:
     image: confluentinc/cp-enterprise-control-center:7.4.0
@@ -324,7 +350,7 @@ services:
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
     networks:
-      - movies_network
+      - ugc_network
 
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:7.4.0
@@ -349,7 +375,7 @@ services:
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
       KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
     networks:
-      - movies_network
+      - ugc_network
 
   ksqldb-cli:
     image: confluentinc/cp-ksqldb-cli:7.4.0
@@ -361,7 +387,7 @@ services:
     entrypoint: /bin/sh
     tty: true
     networks:
-      - movies_network
+      - ugc_network
 
   ksql-datagen:
     image: confluentinc/ksqldb-examples:7.4.0
@@ -385,7 +411,7 @@ services:
       STREAMS_SCHEMA_REGISTRY_HOST: schema-registry
       STREAMS_SCHEMA_REGISTRY_PORT: 8081
     networks:
-      - movies_network
+      - ugc_network
 
   rest-proxy:
     image: confluentinc/cp-kafka-rest:7.4.0
@@ -402,14 +428,14 @@ services:
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
       KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
     networks:
-      - movies_network
+      - ugc_network
 
   zookeeper:
     image: zookeeper:3.5
     container_name: zookeeper
     hostname: zookeeper
     networks:
-      - data_network
+      - ugc_network
 
   clickhouse-node1:
     image: yandex/clickhouse-server:20.4
@@ -423,7 +449,7 @@ services:
     depends_on:
       - zookeeper
     networks:
-      - data_network
+      - ugc_network
 
   clickhouse-node2:
     image: yandex/clickhouse-server:20.4
@@ -434,7 +460,7 @@ services:
     depends_on:
       - zookeeper
     networks:
-      - data_network
+      - ugc_network
 
   clickhouse-node3:
     image: yandex/clickhouse-server:20.4
@@ -445,7 +471,7 @@ services:
     depends_on:
       - zookeeper
     networks:
-      - data_network
+      - ugc_network
 
   clickhouse-node4:
     image: yandex/clickhouse-server:20.4
@@ -456,4 +482,4 @@ services:
     depends_on:
       - zookeeper
     networks:
-      - data_network
+      - ugc_network

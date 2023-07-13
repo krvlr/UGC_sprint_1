@@ -2,7 +2,7 @@ import logging
 from functools import wraps
 from typing import Callable
 
-from core.config import settings
+from core.config import base_settings
 from db.base_cache import CacheAdapter
 from db.cache_adapter import get_redis_adapter
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def cache(
-    expire: int = settings.cache_expire_in_seconds,
+    expire: int = base_settings.cache_expire_in_seconds,
     cache_adapter: CacheAdapter = get_redis_adapter(),
 ) -> Callable:
     def decorator(func: Callable) -> Callable:
